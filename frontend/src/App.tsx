@@ -2,8 +2,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Button } from "./components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
-import { Calendar } from "./components/ui/calendar";
-import { Popover, PopoverTrigger, PopoverContent } from "./components/ui/popover";
 import { DatePicker } from "./components/ui/date-picker";
 import { Input } from "./components/ui/input";
 import {
@@ -127,7 +125,8 @@ const [openDays, setOpenDays] = useState<Record<string, boolean>>({});
   const [historyTo, setHistoryTo] = useState("");
   const [lockYear, setLockYear] = useState("");
   const [lockMonth, setLockMonth] = useState("");
-  const [lockStatus, setLockStatus] = useState<string | null>(null);
+const [lockStatus] = useState<string | null>(null);
+
 
   // Load session from localStorage
   useEffect(() => {
@@ -533,7 +532,7 @@ try {
         alert(msg);
         return;
       }
-      const data = await res.json();
+      await res.json();
       setCurrentLogId(null);
       setVolumeInput("");
       timerStartAtRef.current = null;
