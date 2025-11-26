@@ -208,7 +208,7 @@ app.get("/api/tasks", authMiddleware, async (req, res) => {
 
 // ---------- Start timer ----------
 app.post("/api/time-logs/start", authMiddleware, async (req, res) => {
-  const { task_template_id } = req.body;
+  const { task_template_id, work_location } = req.body;
   const userId = req.user.user_id;
 
   if (!task_template_id) return res.status(400).json({ error: "task_template_id required" });
@@ -222,11 +222,15 @@ app.post("/api/time-logs/start", authMiddleware, async (req, res) => {
     const open = await pool.query("SELECT 1 FROM time_logs WHERE user_id=$1 AND ended_at IS NULL LIMIT 1", [userId]);
     if (open.rows.length > 0) return res.status(400).json({ error: "You already have an active timer." });
 
+    // Validate work_location
+    const validLocations = ['office', 'wfh', 'unknown'];
+    const location = validLocations.includes(work_location) ? work_location : 'unknown';
+
     const insert = await pool.query(
-      `INSERT INTO time_logs (user_id, team_id, task_template_id, work_date, started_at)
-       VALUES ($1, $2, $3, CURRENT_DATE, NOW())
+      `INSERT INTO time_logs (user_id, team_id, task_template_id, work_date, started_at, work_location)
+       VALUES ($1, $2, $3, CURRENT_DATE, NOW(), $4)
        RETURNING *`,
-      [userId, task.team_id, task_template_id]
+      [userId, task.team_id, task_template_id, location]
     );
 
     return res.json({ message: "Timer started", log: insert.rows[0] });
@@ -436,11 +440,12 @@ app.get("/api/time-logs/export", authMiddleware, async (req, res) => {
       params
     );
 
-    let csv = "date,start,end,duration,idle,productive,volume,task\n";
+    let csv = "date,start,end,duration,idle,productive,volume,task,location\n";
     for (const row of result.rows) {
       const start = row.started_at ? new Date(row.started_at).toISOString() : "";
       const end = row.ended_at ? new Date(row.ended_at).toISOString() : "";
-      csv += `${row.work_date},${start},${end},${row.duration_seconds},${row.idle_seconds},${row.productive_seconds},${row.volume},${row.task_name}\n`;
+      const location = row.work_location || "unknown";
+      csv += `${row.work_date},${start},${end},${row.duration_seconds},${row.idle_seconds},${row.productive_seconds},${row.volume},${row.task_name},${location}\n`;
     }
 
     res.setHeader("Content-Type", "text/csv");
